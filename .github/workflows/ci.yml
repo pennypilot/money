@@ -1,0 +1,44 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+jobs:
+  format:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: coursier/cache-action@v6.3
+      - uses: VirtusLab/scala-cli-setup@v1.3.2
+      - name: Scalafmt check
+        run: |
+          scala-cli fmt --check . || (
+            echo "To format code run"
+            echo "  scala-cli fmt ."
+            exit 1
+          )
+  build:
+    runs-on: ${{ matrix.OS }}
+    strategy:
+      matrix:
+        OS: ["ubuntu-latest", "macos-latest", "macos-13", "windows-latest"]
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: coursier/cache-action@v6.3
+      - uses: VirtusLab/scala-cli-setup@v1.3.2
+      - name: test
+        run: scala-cli test .
+      - name: package app
+        run: scala-cli .github/scripts/package.sc
+      - name: upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: launchers
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 2
